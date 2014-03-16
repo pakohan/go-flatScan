@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/pakohan/go-libs/flatscan"
 	"net/http"
-	"pakohan/flatscan"
 	"strconv"
 	"text/template"
 )
