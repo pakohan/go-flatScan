@@ -1,0 +1,4 @@
+cron:
+- description: scrape new offers
+  url: /scrape
+  schedule: every 1 minutes
