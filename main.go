@@ -119,7 +119,6 @@ func loadList(url string, c appengine.Context) {
 			}
 
 			msg := &mail.Message{
-				Sender:  "Flat Scan Sender <patrick.kohan@gmail.com>",
 				Subject: "Found a Flat",
 				Body:    buf.String(),
 			}
