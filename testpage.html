@@ -51,7 +51,8 @@
                     <h4 class="modal-title" id="myModalLabel">{{Street}} {{Zip}} {{District}}</h4>
                   </div>
                   <div class="modal-body">
-                    <img src="http://maps.googleapis.com/maps/api/staticmap?center={{Street}},{{Zip}},{{District}}&zoom=13&size=560x560&sensor=false&key=AIzaSyD-vnJh2YR6_8yjgnyheW0ANcvrwBJ6zVA">
+                    <img src="http://maps.googleapis.com/maps/api/staticmap?center={{Street}},{{Zip}},{{District}}&zoom=13&size=560x560&sensor=false&key=AIzaSyD-vnJh2YR6_8yjgnyheW0ANcvrwBJ6zVA"><br>
+                    {{{replace Description}}}
                   </div>
                   <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -74,6 +75,9 @@
       Handlebars.registerHelper('unixtime', function(unixtime) {
         var date = new Date(unixtime*1000);
         return date.toISOString();
+      });
+      Handlebars.registerHelper('replace', function(string) {
+        return string.replace(/\n/g, "<br>").replace(/\\n/g, "<br>");
       });
       $.ajax({
           url: "/listSaved",
