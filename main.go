@@ -5,6 +5,7 @@ import (
 	"appengine/datastore"
 	"appengine/mail"
 	"appengine/urlfetch"
+	"appengine/user"
 	"bytes"
 	"crypto/md5"
 	"encoding/json"
@@ -46,7 +47,9 @@ func init() {
 	http.HandleFunc("/scrape", scrape)
 	http.HandleFunc("/initialScrape", initialScrape)
 	http.HandleFunc("/listSaved", listSaved)
-	http.HandleFunc("/setInvalid", setInvalid)
+	http.HandleFunc("/toggleOffer", toggleOffer)
+	http.HandleFunc("/removeZip", removeZip)
+	http.HandleFunc("/", index)
 }
 
 func scrape(w http.ResponseWriter, r *http.Request) {
@@ -55,18 +58,57 @@ func scrape(w http.ResponseWriter, r *http.Request) {
 	loadList(searchUrl, c)
 }
 
+func index(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	u := user.Current(c)
+	if u == nil {
+		url, _ := user.LoginURL(c, "/")
+		http.Redirect(w, r, url, 302)
+		return
+	}
+
+	if u.Admin {
+		http.ServeFile(w, r, "index.html")
+		return
+	}
+
+	http.Redirect(w, r, "http://google.de", 302)
+}
+
 func listSaved(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 
 	dst := make([]flatscan.FlatOffer, 0)
+	id, err := strconv.ParseInt(r.FormValue("scope"), 10, 64)
 
-	_, err := datastore.NewQuery("FlatOffer").Filter("Valid =", true).GetAll(c, &dst)
+	switch id {
+	case 0:
+		_, err = datastore.NewQuery("FlatOffer").GetAll(c, &dst)
+	case 1:
+		_, err = datastore.NewQuery("FlatOffer").Filter("Valid =", true).GetAll(c, &dst)
+	case 2:
+		_, err = datastore.NewQuery("FlatOffer").Filter("Valid =", false).GetAll(c, &dst)
+	}
+
+	keys, err := datastore.NewQuery("ZIP").KeysOnly().GetAll(c, nil)
+	zipMap := make(map[int64]bool)
+	for _, v := range keys {
+		zipMap[v.IntID()] = true
+	}
+
+	dst2 := make([]flatscan.FlatOffer, 0)
+	for _, v := range dst {
+		if !zipMap[v.Zip] {
+			dst2 = append(dst2, v)
+		}
+	}
+
 	if err != nil {
 		w.Write([]byte(err.Error()))
 		return
 	}
 
-	val, err := json.Marshal(dst)
+	val, err := json.Marshal(dst2)
 	if err != nil {
 		w.Write([]byte(err.Error()))
 		return
@@ -76,13 +118,13 @@ func listSaved(w http.ResponseWriter, r *http.Request) {
 	w.Write(val)
 }
 
-func setInvalid(w http.ResponseWriter, r *http.Request) {
+func toggleOffer(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 	id := r.FormValue("ID")
-	c.Infof(id)
+	valid, err := strconv.ParseBool(r.FormValue("valid"))
 	key := datastore.NewKey(c, "FlatOffer", id, 0, nil)
 	dst := make([]flatscan.FlatOffer, 0)
-	_, err := datastore.NewQuery("FlatOffer").Filter("__key__ =", key).GetAll(c, &dst)
+	_, err = datastore.NewQuery("FlatOffer").Filter("__key__ =", key).GetAll(c, &dst)
 	if err != nil {
 		c.Errorf(err.Error())
 		return
@@ -90,9 +132,21 @@ func setInvalid(w http.ResponseWriter, r *http.Request) {
 
 	if len(dst) > 0 {
 		offer := dst[0]
-		offer.Valid = false
+		offer.Valid = valid
 		key, err = datastore.Put(c, key, &offer)
-		c.Infof("%+v", offer)
+	}
+}
+
+type Zip struct{}
+
+func removeZip(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	zip, err := strconv.ParseInt(r.FormValue("ID"), 10, 64)
+	key := datastore.NewKey(c, "ZIP", "", zip, nil)
+	key, err = datastore.Put(c, key, &Zip{})
+	if err != nil {
+		c.Errorf(err.Error())
+		return
 	}
 }
 
