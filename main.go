@@ -6,10 +6,12 @@ import (
 	"appengine/mail"
 	"appengine/urlfetch"
 	"bytes"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pakohan/go-libs/flatscan"
+	"io"
 	"net/http"
 	"strconv"
 	"text/template"
@@ -44,6 +46,7 @@ func init() {
 	http.HandleFunc("/scrape", scrape)
 	http.HandleFunc("/initialScrape", initialScrape)
 	http.HandleFunc("/listSaved", listSaved)
+	http.HandleFunc("/setInvalid", setInvalid)
 }
 
 func scrape(w http.ResponseWriter, r *http.Request) {
@@ -73,6 +76,26 @@ func listSaved(w http.ResponseWriter, r *http.Request) {
 	w.Write(val)
 }
 
+func setInvalid(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	id := r.FormValue("ID")
+	c.Infof(id)
+	key := datastore.NewKey(c, "FlatOffer", id, 0, nil)
+	dst := make([]flatscan.FlatOffer, 0)
+	_, err := datastore.NewQuery("FlatOffer").Filter("__key__ =", key).GetAll(c, &dst)
+	if err != nil {
+		c.Errorf(err.Error())
+		return
+	}
+
+	if len(dst) > 0 {
+		offer := dst[0]
+		offer.Valid = false
+		key, err = datastore.Put(c, key, &offer)
+		c.Infof("%+v", offer)
+	}
+}
+
 func initialScrape(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 	pages, err := strconv.ParseInt(r.FormValue("amount"), 10, 64)
@@ -95,7 +118,11 @@ func loadList(url string, c appengine.Context) {
 	}
 
 	for _, path := range flatscan.ExtractLinks(doc) {
-		key := datastore.NewKey(c, "FlatOffer", path, 0, nil)
+		h := md5.New()
+		io.WriteString(h, path)
+		md5Sum := fmt.Sprintf("%x", h.Sum(nil))
+
+		key := datastore.NewKey(c, "FlatOffer", md5Sum, 0, nil)
 		amount, err := CheckAmountGAE(key, c)
 		if amount > 0 || err != nil {
 			continue
@@ -109,6 +136,7 @@ func loadList(url string, c appengine.Context) {
 
 		offer := flatscan.GetOffer(doc)
 		offer.Url = path
+		offer.ID = md5Sum
 
 		offer.Valid = flatscan.CheckOffer(offer)
 		if offer.Valid {
@@ -131,6 +159,9 @@ func loadList(url string, c appengine.Context) {
 		}
 
 		key, err = datastore.Put(c, key, offer)
+		if err != nil {
+			c.Errorf(err.Error())
+		}
 	}
 }
 

@@ -32,6 +32,7 @@
           <th>R&auml;ume</th>
           <th>Fl&auml;che</th>
           <th>Link</th>
+          <th>Aus Liste entfernen</th>
         </thead>
         <tbody>
           {{#offers}}
@@ -42,6 +43,7 @@
               <td>{{Rooms}}</td>
               <td>{{Size}}</td>
               <td><a href="http://kleinanzeigen.ebay.de{{Url}}">Angebot</a></td>
+              <td><button class="btn btn-danger btn-sm" onclick="deleteOffer('{{ID}}')">Entfernen</button></td>
             </tr>
             <div class="modal fade" id="myModal-{{@index}}" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
               <div class="modal-dialog">
@@ -79,9 +81,10 @@
       Handlebars.registerHelper('replace', function(string) {
         return string.replace(/\n/g, "<br>").replace(/\\n/g, "<br>");
       });
-      $.ajax({
+      function reload() {
+        $.ajax({
           url: "/listSaved",
-      }).done(function (data) {
+        }).done(function (data) {
           console.log(data);
           var template_data = {
               offers: data,
@@ -99,7 +102,18 @@
               var length_sel = datatable.closest('.dataTables_wrapper').find('div[id$=_length] select');
               length_sel.addClass('form-control input-sm');
           });
-      });
+        });
+      }
+      reload();
+      function deleteOffer(ID) {
+        console.log(ID);
+        $.ajax({
+          url: "/setInvalid",
+          data: { "ID": ID }
+        }).done(function (data) {
+          reload()
+        });
+      }
     </script>
   </body>
 </html>
