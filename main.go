@@ -33,7 +33,10 @@ You have a new offer:
 {{end}}{{if gt .Zip 0}}{{.Zip}} {{end}}Berlin
 Rooms: {{.Rooms}}
 Size: {{.Size}}
-Url: http://kleinanzeigen.ebay.de/{{.Url}}
+Url: http://kleinanzeigen.ebay.de{{.Url}}
+
+Remove ZIP: http://flat-scan.appspot.com/removeZip?ID={{.Zip}}
+Set as invalid: http://flat-scan.appspot.com/toggleOffer?ID={{md5 .Url}}&valid=false
 
 Description: {{.Description}}`
 )
@@ -42,7 +45,20 @@ var emailTemplate *template.Template
 
 func init() {
 	// as long as we never change something in the template, it won't throw an error
-	emailTemplate, _ = template.New("email").Parse(email)
+
+	funcMap := template.FuncMap{
+		"md5": func(s string) string {
+			md5Writer := md5.New()
+			io.WriteString(md5Writer, s)
+			return fmt.Sprintf("%x", md5Writer.Sum(nil))
+		},
+	}
+
+	t, err := template.New("email").Funcs(funcMap).Parse(email)
+	if err != nil {
+		panic(err)
+	}
+	emailTemplate = t
 
 	http.HandleFunc("/scrape", scrape)
 	http.HandleFunc("/initialScrape", initialScrape)
@@ -55,17 +71,30 @@ func init() {
 
 func scrape(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
-	searchUrl := fmt.Sprintf(searchSite, base, 1)
-	err := loadList(searchUrl, c)
-	if err != nil {
-		sendErrorMail(err)
+	i := 27
+	counter := 1
+	for i == 27 {
+		searchUrl := fmt.Sprintf(searchSite, base, counter)
+		counter++
+		var err error
+		i, err = loadList(searchUrl, c)
+		if err != nil {
+			sendErrorMail(c, err)
+			return
+		}
 	}
 }
 
 type Zip struct{}
 
-func sendErrorMail(err error) {
+func sendErrorMail(c appengine.Context, err error) {
+	msg := &mail.Message{
+		Sender:  "Flat Scan Sender <admin@flat-scan.appspotmail.com>",
+		Subject: "Error",
+		Body:    err.Error(),
+	}
 
+	err = mail.SendToAdmins(c, msg)
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +104,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 		url, err := user.LoginURL(c, "/")
 		if err != nil {
 			http.Error(w, "could not create login url", http.StatusInternalServerError)
-			sendErrorMail(err)
+			sendErrorMail(c, err)
 			return
 		}
 
@@ -99,7 +128,7 @@ func listSaved(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Add("Content-Type", "application/json")
 		http.Error(w, "[]", http.StatusInternalServerError)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
@@ -115,7 +144,7 @@ func listSaved(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Add("Content-Type", "application/json")
 		http.Error(w, "[]", http.StatusInternalServerError)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
@@ -123,7 +152,7 @@ func listSaved(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Add("Content-Type", "application/json")
 		http.Error(w, "[]", http.StatusInternalServerError)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
@@ -143,7 +172,7 @@ func listSaved(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Add("Content-Type", "application/json")
 		http.Error(w, "[]", http.StatusInternalServerError)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
@@ -157,21 +186,21 @@ func incomingMail(w http.ResponseWriter, r *http.Request) {
 	m, err := gomail.ReadMessage(r.Body)
 	if err != nil {
 		http.Error(w, "couldn't parse mail", http.StatusInternalServerError)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
 	bytes, err := ioutil.ReadAll(m.Body)
 	if err != nil {
 		http.Error(w, "couldn't parse mail", http.StatusInternalServerError)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
 	from, err := m.Header.AddressList("From")
 	if err != nil {
 		http.Error(w, "couldn't parse mail sender", http.StatusInternalServerError)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
@@ -182,7 +211,7 @@ func incomingMail(w http.ResponseWriter, r *http.Request) {
 	to, err := m.Header.AddressList("To")
 	if err != nil {
 		http.Error(w, "couldn't parse mail receiver", http.StatusInternalServerError)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
@@ -200,7 +229,7 @@ func toggleOffer(w http.ResponseWriter, r *http.Request) {
 	isValid, err := strconv.ParseBool(valid)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("parameter valid '%s' not valid", valid), http.StatusBadRequest)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
@@ -211,7 +240,7 @@ func toggleOffer(w http.ResponseWriter, r *http.Request) {
 	_, err = datastore.NewQuery(entitiyFlatOffer).Filter("__key__ =", key).GetAll(c, &dst)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("couldn't load offer"), http.StatusInternalServerError)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
@@ -221,7 +250,7 @@ func toggleOffer(w http.ResponseWriter, r *http.Request) {
 		key, err = datastore.Put(c, key, &offer)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("couldn't save offer"), http.StatusInternalServerError)
-			sendErrorMail(err)
+			sendErrorMail(c, err)
 		}
 	}
 }
@@ -232,7 +261,7 @@ func removeZip(w http.ResponseWriter, r *http.Request) {
 	zip, err := strconv.ParseInt(zipString, 10, 64)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("parameter valid '%s' not valid", zipString), http.StatusBadRequest)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
@@ -240,7 +269,7 @@ func removeZip(w http.ResponseWriter, r *http.Request) {
 	key, err = datastore.Put(c, key, &Zip{})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("couldn't blacklist zip '&s'", zipString), http.StatusInternalServerError)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 	}
 }
 
@@ -250,25 +279,32 @@ func initialScrape(w http.ResponseWriter, r *http.Request) {
 	pages, err := strconv.ParseInt(amount, 10, 64)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("parameter amount '%s' not valid", amount), http.StatusBadRequest)
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
 	for i := 1; i < int(pages); i++ {
 		searchUrl := fmt.Sprintf(searchSite, base, i)
-		err = loadList(searchUrl, c)
+		_, err = loadList(searchUrl, c)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("couldn't load list"), http.StatusBadRequest)
-			sendErrorMail(err)
+			panic(err)
+			sendErrorMail(c, err)
+			return
 		}
 	}
 }
 
 func checkZip(offer *flatscan.FlatOffer, c appengine.Context) (err error) {
+	if offer.Zip == 0 {
+		c.Warningf(fmt.Sprintf("Invalid Zip in Offer with url '%s'", offer.Url))
+		return nil
+	}
+
 	key := datastore.NewKey(c, zipEntity, "", offer.Zip, nil)
 	amount, err := datastore.NewQuery(zipEntity).Filter("__key__ =", key).Count(c)
 	if err != nil {
-		sendErrorMail(err)
+		sendErrorMail(c, err)
 		return
 	}
 
@@ -279,7 +315,8 @@ func checkZip(offer *flatscan.FlatOffer, c appengine.Context) (err error) {
 	return
 }
 
-func loadList(url string, c appengine.Context) (err error) {
+func loadList(url string, c appengine.Context) (i int, err error) {
+	i = 0
 	client := urlfetch.Client(c)
 	var doc *goquery.Document
 	doc, err = LoadDocumentGAE(url, client)
@@ -298,15 +335,21 @@ func loadList(url string, c appengine.Context) (err error) {
 
 		if amount > 0 || err != nil {
 			continue
+		} else {
+			i++
 		}
 
 		offerUrl := fmt.Sprintf("%s%s", base, offerPath)
 		doc, err = LoadDocumentGAE(offerUrl, client)
 		if err != nil {
-			return err
+			return i, err
 		}
 
-		offer := flatscan.GetOffer(doc)
+		offer, err := flatscan.GetOffer(doc, c)
+		if err != nil {
+			return i, err
+		}
+
 		offer.Url = offerPath
 		offer.ID = md5Sum
 
@@ -314,14 +357,14 @@ func loadList(url string, c appengine.Context) (err error) {
 
 		err = checkZip(offer, c)
 		if err != nil {
-			return err
+			return i, err
 		}
 
 		if offer.Valid {
 			buf := bytes.NewBufferString("")
 			err = emailTemplate.Execute(buf, offer)
 			if err != nil {
-				return err
+				return i, err
 			}
 
 			msg := &mail.Message{
@@ -330,19 +373,22 @@ func loadList(url string, c appengine.Context) (err error) {
 				Body:    buf.String(),
 			}
 
+			c.Infof(msg.Body)
+
 			err = mail.SendToAdmins(c, msg)
 			if err != nil {
-				return err
+				return i, err
 			}
 		}
 
 		key, err = datastore.Put(c, key, offer)
 		if err != nil {
-			return err
+			c.Infof(fmt.Sprintf("%+v", offer))
+			return i, err
 		}
 	}
 
-	return nil
+	return i, nil
 }
 
 func CheckAmountGAE(key *datastore.Key, c appengine.Context) (amount int, err error) {
