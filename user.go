@@ -17,6 +17,8 @@ type Setting struct {
 	MaxPrice  int64
 	MinRooms  float64
 	MaxRooms  float64
+	MinSize   float64
+	MaxSize   float64
 	Email     string
 }
 
@@ -72,6 +74,21 @@ func (s *Setting) ChangeSetting(form url.Values) (numErrors int) {
 		numErrors++
 	}
 
+	beginRange, endRange, err = getRangeValues(form.Get("size"))
+	if err == nil {
+		s.MinSize, err = strconv.ParseFloat(beginRange, 64)
+		if err != nil {
+			numErrors++
+		}
+
+		s.MaxSize, err = strconv.ParseFloat(endRange, 64)
+		if err != nil {
+			numErrors++
+		}
+	} else {
+		numErrors++
+	}
+
 	return
 }
 
@@ -82,6 +99,11 @@ func (s Setting) CheckOffer(offer flatscan.FlatOffer) (interested bool) {
 	}
 
 	interested = offer.RentN > 0 && (int64(offer.RentN) >= s.MinPrice) && (int64(offer.RentN) <= s.MaxPrice)
+	if !interested {
+		return
+	}
+
+	interested = offer.Size > 0 && (offer.Size >= s.MinSize) && (offer.Size <= s.MaxSize)
 	if !interested {
 		return
 	}

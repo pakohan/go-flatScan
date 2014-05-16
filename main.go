@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pakohan/go-libs/flatscan"
@@ -15,12 +16,13 @@ import (
 	"net/http"
 	"strconv"
 	"text/template"
+	"time"
 )
 
 const (
 	base             string = "http://kleinanzeigen.ebay.de"
 	searchSite       string = "%s/anzeigen/s-wohnung-mieten/berlin/anzeige:angebote/seite:%d/c203l3331"
-	entitiyFlatOffer string = "FlatOffer"
+	entitiyFlatOffer string = "OFFER"
 	zipEntity        string = "ZIP"
 	userEntitiy      string = "USER"
 	email            string = `
@@ -69,6 +71,8 @@ func init() {
 
 func scrape(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
+	go checkOffers(c)
+
 	i := 27
 	counter := 1
 	for i == 27 {
@@ -204,6 +208,34 @@ func removeZip(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("couldn't blacklist zip '&s'", zipString), http.StatusInternalServerError)
 		sendErrorMail(c, err)
+	}
+}
+
+func checkOffers(c appengine.Context) {
+	dst := make([]flatscan.FlatOffer, 0)
+	now := time.Now().Unix()
+	c.Infof("%d", now)
+	keys, err := datastore.NewQuery(entitiyFlatOffer).Filter("TimeUpdated <", now-(60*60*24)).GetAll(c, &dst)
+	if err != nil {
+		c.Errorf("%s", err)
+		return
+	}
+
+	client := urlfetch.Client(c)
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return errors.New("")
+	}
+
+	for i, offer := range dst {
+		resp, _ := client.Get(fmt.Sprintf("http://kleinanzeigen.ebay.de%s", offer.Url))
+
+		if resp.StatusCode == 301 {
+			c.Infof("Removing Entity with url '%s'", offer.Url)
+			err = datastore.Delete(c, keys[i])
+			if err != nil {
+				c.Errorf("%s", err)
+			}
+		}
 	}
 }
 
