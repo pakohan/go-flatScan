@@ -25,7 +25,7 @@ const (
 	userEntitiy      string = "USER"
 	email            string = `
 You have a new offer:
-{{if gt .RentN 0}}Rent: {{.RentN}}
+{{if gt .RentN 0.0}}Rent: {{.RentN}}
 {{end}}Adresse: {{if gt (len .Street) 0}}{{.Street}}
 {{end}}{{if gt (len .District) 0}}{{.District}}
 {{end}}{{if gt .Zip 0}}{{.Zip}} {{end}}Berlin
@@ -59,7 +59,6 @@ func init() {
 	emailTemplate = t
 
 	http.HandleFunc("/scrape", scrape)
-	http.HandleFunc("/initialScrape", initialScrape)
 	http.HandleFunc("/listSaved", listSaved)
 	http.HandleFunc("/toggleOffer", toggleOffer)
 	http.HandleFunc("/removeZip", removeZip)
@@ -72,16 +71,16 @@ func scrape(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 	i := 27
 	counter := 1
-	//for i == 27 {
-	searchUrl := fmt.Sprintf(searchSite, base, counter)
-	counter++
-	var err error
-	i, err = loadList(searchUrl, c)
-	if err != nil {
-		sendErrorMail(c, err)
-		return
+	for i == 27 {
+		searchUrl := fmt.Sprintf(searchSite, base, counter)
+		counter++
+		var err error
+		_, err = loadList(searchUrl, c)
+		if err != nil {
+			sendErrorMail(c, err)
+			return
+		}
 	}
-	//}
 }
 
 type Zip struct{}
@@ -93,6 +92,7 @@ func sendErrorMail(c appengine.Context, err error) {
 		Body:    err.Error(),
 	}
 
+	c.Errorf("%s", err)
 	err = mail.SendToAdmins(c, msg)
 }
 
@@ -207,49 +207,8 @@ func removeZip(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func initialScrape(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
-	amount := r.FormValue("amount")
-	pages, err := strconv.ParseInt(amount, 10, 64)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("parameter amount '%s' not valid", amount), http.StatusBadRequest)
-		sendErrorMail(c, err)
-		return
-	}
-
-	for i := 1; i < int(pages); i++ {
-		searchUrl := fmt.Sprintf(searchSite, base, i)
-		_, err = loadList(searchUrl, c)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("couldn't load list"), http.StatusBadRequest)
-			panic(err)
-			sendErrorMail(c, err)
-			return
-		}
-	}
-}
-
-func checkZip(offer *flatscan.FlatOffer, c appengine.Context) (err error) {
-	if offer.Zip == 0 {
-		c.Warningf(fmt.Sprintf("Invalid Zip in Offer with url '%s'", offer.Url))
-		return nil
-	}
-
-	key := datastore.NewKey(c, zipEntity, "", offer.Zip, nil)
-	amount, err := datastore.NewQuery(zipEntity).Filter("__key__ =", key).Count(c)
-	if err != nil {
-		sendErrorMail(c, err)
-		return
-	}
-
-	if amount > 0 {
-		offer.Valid = false
-	}
-
-	return
-}
-
 func loadList(url string, c appengine.Context) (i int, err error) {
+	s, err := GetSettings(c)
 	i = 0
 	client := urlfetch.Client(c)
 	var doc *goquery.Document
@@ -287,31 +246,27 @@ func loadList(url string, c appengine.Context) (i int, err error) {
 		offer.Url = offerPath
 		offer.ID = md5Sum
 
-		offer.Valid = flatscan.CheckOffer(offer)
+		for _, setting := range s {
+			if setting.CheckOffer(*offer) {
+				buf := bytes.NewBufferString("")
+				err = emailTemplate.Execute(buf, offer)
+				if err != nil {
+					return i, err
+				}
 
-		err = checkZip(offer, c)
-		if err != nil {
-			return i, err
-		}
+				msg := &mail.Message{
+					Sender:  "Flat Scan Sender <admin@flat-scan.appspotmail.com>",
+					To:      []string{setting.Email},
+					Subject: "Found a Flat",
+					Body:    buf.String(),
+				}
 
-		if offer.Valid {
-			buf := bytes.NewBufferString("")
-			err = emailTemplate.Execute(buf, offer)
-			if err != nil {
-				return i, err
-			}
+				c.Infof(msg.Body)
 
-			msg := &mail.Message{
-				Sender:  "Flat Scan Sender <admin@flat-scan.appspotmail.com>",
-				Subject: "Found a Flat",
-				Body:    buf.String(),
-			}
-
-			c.Infof(msg.Body)
-
-			err = mail.SendToAdmins(c, msg)
-			if err != nil {
-				return i, err
+				err = mail.Send(c, msg)
+				if err != nil {
+					return i, err
+				}
 			}
 		}
 

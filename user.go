@@ -1,6 +1,8 @@
 package main
 
 import (
+	"appengine"
+	"appengine/datastore"
 	"errors"
 	"fmt"
 	"github.com/pakohan/go-libs/flatscan"
@@ -74,16 +76,21 @@ func (s *Setting) ChangeSetting(form url.Values) (numErrors int) {
 }
 
 func (s Setting) CheckOffer(offer flatscan.FlatOffer) (interested bool) {
-	interested = (offer.Rooms >= s.MinRooms) && (offer.Rooms <= s.MaxRooms)
+	interested = offer.Rooms > 0 && (offer.Rooms >= s.MinRooms) && (offer.Rooms <= s.MaxRooms)
 	if !interested {
 		return
 	}
 
-	interested = (int64(offer.RentN) >= s.MinPrice) && (int64(offer.RentN) <= s.MaxPrice)
+	interested = offer.RentN > 0 && (int64(offer.RentN) >= s.MinPrice) && (int64(offer.RentN) <= s.MaxPrice)
 	if !interested {
 		return
 	}
 
-	interested = strings.Contains(s.Districts, strings.ToLower(offer.District))
+	interested = len(offer.District) > 0 && strings.Contains(s.Districts, strings.ToLower(offer.District))
+	return
+}
+
+func GetSettings(c appengine.Context) (settings []Setting, err error) {
+	_, err = datastore.NewQuery(userEntitiy).GetAll(c, &settings)
 	return
 }
