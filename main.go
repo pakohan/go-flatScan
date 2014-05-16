@@ -5,7 +5,6 @@ import (
 	"appengine/datastore"
 	"appengine/mail"
 	"appengine/urlfetch"
-	"appengine/user"
 	"bytes"
 	"crypto/md5"
 	"encoding/json"
@@ -13,9 +12,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pakohan/go-libs/flatscan"
 	"io"
-	"io/ioutil"
 	"net/http"
-	gomail "net/mail"
 	"strconv"
 	"text/template"
 )
@@ -25,6 +22,7 @@ const (
 	searchSite       string = "%s/anzeigen/s-wohnung-mieten/berlin/anzeige:angebote/seite:%d/c203l3331"
 	entitiyFlatOffer string = "FlatOffer"
 	zipEntity        string = "ZIP"
+	userEntitiy      string = "USER"
 	email            string = `
 You have a new offer:
 {{if gt .RentN 0}}Rent: {{.RentN}}
@@ -66,23 +64,24 @@ func init() {
 	http.HandleFunc("/toggleOffer", toggleOffer)
 	http.HandleFunc("/removeZip", removeZip)
 	http.HandleFunc("/", index)
-	http.HandleFunc("/_ah/mail/", incomingMail)
+	http.HandleFunc("/index.html", index)
+	http.HandleFunc("/pref.html", pref)
 }
 
 func scrape(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 	i := 27
 	counter := 1
-	for i == 27 {
-		searchUrl := fmt.Sprintf(searchSite, base, counter)
-		counter++
-		var err error
-		i, err = loadList(searchUrl, c)
-		if err != nil {
-			sendErrorMail(c, err)
-			return
-		}
+	//for i == 27 {
+	searchUrl := fmt.Sprintf(searchSite, base, counter)
+	counter++
+	var err error
+	i, err = loadList(searchUrl, c)
+	if err != nil {
+		sendErrorMail(c, err)
+		return
 	}
+	//}
 }
 
 type Zip struct{}
@@ -95,29 +94,6 @@ func sendErrorMail(c appengine.Context, err error) {
 	}
 
 	err = mail.SendToAdmins(c, msg)
-}
-
-func index(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
-	u := user.Current(c)
-	if u == nil {
-		url, err := user.LoginURL(c, "/")
-		if err != nil {
-			http.Error(w, "could not create login url", http.StatusInternalServerError)
-			sendErrorMail(c, err)
-			return
-		}
-
-		http.Redirect(w, r, url, 302)
-		return
-	}
-
-	if u.Admin {
-		http.ServeFile(w, r, "index.html")
-		return
-	}
-
-	http.Redirect(w, r, "http://google.de", 302)
 }
 
 func listSaved(w http.ResponseWriter, r *http.Request) {
@@ -178,48 +154,6 @@ func listSaved(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(val)
-}
-
-func incomingMail(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
-	defer r.Body.Close()
-	m, err := gomail.ReadMessage(r.Body)
-	if err != nil {
-		http.Error(w, "couldn't parse mail", http.StatusInternalServerError)
-		sendErrorMail(c, err)
-		return
-	}
-
-	bytes, err := ioutil.ReadAll(m.Body)
-	if err != nil {
-		http.Error(w, "couldn't parse mail", http.StatusInternalServerError)
-		sendErrorMail(c, err)
-		return
-	}
-
-	from, err := m.Header.AddressList("From")
-	if err != nil {
-		http.Error(w, "couldn't parse mail sender", http.StatusInternalServerError)
-		sendErrorMail(c, err)
-		return
-	}
-
-	if len(from) < 1 || err != nil {
-		from = []*gomail.Address{&gomail.Address{}}
-	}
-
-	to, err := m.Header.AddressList("To")
-	if err != nil {
-		http.Error(w, "couldn't parse mail receiver", http.StatusInternalServerError)
-		sendErrorMail(c, err)
-		return
-	}
-
-	if len(from) < 1 {
-		to = []*gomail.Address{&gomail.Address{}}
-	}
-
-	c.Infof("Received mail from: %s; to: %s; text: %s", from[0].Address, to[0].Address, string(bytes))
 }
 
 func toggleOffer(w http.ResponseWriter, r *http.Request) {
