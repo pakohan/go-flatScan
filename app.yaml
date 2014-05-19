@@ -1,5 +1,5 @@
-application: flat-scan
-version: 2
+application: flat-scraper
+version: 1
 runtime: go
 api_version: go1
 

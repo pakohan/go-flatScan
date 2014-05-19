@@ -1,5 +1,27 @@
 package main
 
+const (
+	base             string = "http://kleinanzeigen.ebay.de"
+	searchSite       string = "%s/anzeigen/s-wohnung-mieten/berlin/anzeige:angebote/seite:%d/c203l3331"
+	entitiyFlatOffer string = "OFFER"
+	zipEntity        string = "ZIP"
+	userEntitiy      string = "USER"
+	email            string = `
+You have a new offer:
+{{if gt .RentN 0.0}}Rent: {{.RentN}}
+{{end}}Adresse: {{if gt (len .Street) 0}}{{.Street}}
+{{end}}{{if gt (len .District) 0}}{{.District}}
+{{end}}{{if gt .Zip 0}}{{.Zip}} {{end}}Berlin
+Rooms: {{.Rooms}}
+Size: {{.Size}}
+Url: http://kleinanzeigen.ebay.de{{.Url}}
+
+Remove ZIP: http://flat-scan.appspot.com/removeZip?ID={{.Zip}}
+Set as invalid: http://flat-scan.appspot.com/toggleOffer?ID={{md5 .Url}}&valid=false
+
+Description: {{.Description}}`
+)
+
 var plz map[int]string = map[int]string{
 	10115: "Mitte",
 	10117: "Mitte",
