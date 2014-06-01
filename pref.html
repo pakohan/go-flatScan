@@ -5,15 +5,25 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="./public/css/map.css" media="all" rel="stylesheet" />
     <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link href="./public/css/todc-bootstrap.min.css" rel="stylesheet">
-    <link href="./public/css/select2.css" rel="stylesheet"/>
     <link href="./public/css/normalize.min.css" rel="stylesheet"/>
     <link href="./public/css/ion.rangeSlider.css" rel="stylesheet"/>
     <link href="./public/css/ion.rangeSlider.skinFlat.css" rel="stylesheet"/>
+    <!--link rel="stylesheet" href="http://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css"-->
+    <script src="http://code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="./public/js/ion.rangeSlider.js"></script>
+    <!--script src="http://code.jquery.com/ui/1.10.4/jquery-ui.js"></script-->
+    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <script src="./public/js/select2.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqfaRyN-jIdyEVU7RtUUF2Q1sCVMk-SOE&amp;sensor=false"></script>
+    <script src="./public/js/zips.js"></script>
+    <script src="./public/js/map.js"></script>
     <style type="text/css">
       .top-buffer {
         margin-top:20px;
+        margin-bottom:100px;
       }
     </style>
   </head>
@@ -33,140 +43,19 @@
       </div>
     </nav>
     <div class="container">
+      <div class="alert alert-danger fade in">
+        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+        <h2>Please read before usage:</h2>
+        <p>Keep in mind that this server runs as a free service which has quota limits. When these limits are reached, the service will not work anymore.</p>
+        <p>This service is not public, but at least three people use it. In the form, select <b>ranges as small as possible, as big as necessary</b>, because the service cannot send more than 100 emails per day!</p>
+      </div>
       <form autocomplete="off" role="form" method="post" action="pref.html" class="container-fluid">
-        <div class="row">
-          <p class="col-md-offset-3 col-md-2"><b>District</b></p>
-        </div>
-        <div class="row col-md-offset-3">
-          <select multiple class="col-md-6" type="hidden" id="district" name="district">
-            <optgroup label="Mitte">
-              <option value="Mitte">Mitte</option>
-              <option value="Moabit">Moabit</option>
-              <option value="Hansaviertel">Hansaviertel</option>
-              <option value="Tiergarten">Tiergarten</option>
-              <option value="Wedding">Wedding</option>
-              <option value="Gesundbrunnen">Gesundbrunnen</option>
-            </optgroup>
-            <optgroup label="Friedrichshain-Kreuzberg">
-              <option value="Friedrichshain">Friedrichshain</option>
-              <option value="Kreuzberg">Kreuzberg</option>
-            </optgroup>
-            <optgroup label="Pankow">
-              <option value="Prenzlauer Berg">Prenzlauer Berg</option>
-              <option value="Weißensee">Weißensee</option>
-              <option value="Blankenburg">Blankenburg</option>
-              <option value="Heinersdorf">Heinersdorf</option>
-              <option value="Karow">Karow</option>
-              <option value="Stadtrandsiedlung Malchow">Stadtrandsiedlung Malchow</option>
-              <option value="Pankow">Pankow</option>
-              <option value="Blankenfelde">Blankenfelde</option>
-              <option value="Buch">Buch</option>
-              <option value="Französisch Buchholz">Französisch Buchholz</option>
-              <option value="Niederschönhausen">Niederschönhausen</option>
-              <option value="Rosenthal">Rosenthal</option>
-              <option value="Wilhelmsruh">Wilhelmsruh</option>
-            </optgroup>
-            <optgroup label="Charlottenburg-Wilmersdorf">
-              <option value="Charlottenburg">Charlottenburg</option>
-              <option value="Wilmersdorf">Wilmersdorf</option>
-              <option value="Schmargendorf">Schmargendorf</option>
-              <option value="Grunewald">Grunewald</option>
-              <option value="Westend">Westend</option>
-              <option value="Charlottenburg-Nord">Charlottenburg-Nord</option>
-              <option value="Halensee">Halensee</option>
-            </optgroup>
-            <optgroup label="Spandau">
-              <option value="Spandau">Spandau</option>
-              <option value="Haselhorst">Haselhorst</option>
-              <option value="Siemensstadt">Siemensstadt</option>
-              <option value="Staaken">Staaken</option>
-              <option value="Gatow">Gatow</option>
-              <option value="Kladow">Kladow</option>
-              <option value="Hakenfelde">Hakenfelde</option>
-              <option value="Falkenhagener Feld">Falkenhagener Feld</option>
-              <option value="Wilhelmstadt">Wilhelmstadt</option>
-            </optgroup>
-            <optgroup label="Steglitz-Zehlendorf">
-              <option value="Steglitz">Steglitz</option>
-              <option value="Lichterfelde">Lichterfelde</option>
-              <option value="Lankwitz">Lankwitz</option>
-              <option value="Zehlendorf">Zehlendorf</option>
-              <option value="Dahlem">Dahlem</option>
-              <option value="Nikolassee">Nikolassee</option>
-              <option value="Wannsee">Wannsee</option>
-            </optgroup>
-            <optgroup label="Tempelhof-Schöneberg">
-              <option value="Schöneberg">Schöneberg</option>
-              <option value="Friedenau">Friedenau</option>
-              <option value="Tempelhof">Tempelhof</option>
-              <option value="Mariendorf">Mariendorf</option>
-              <option value="Marienfelde">Marienfelde</option>
-              <option value="Lichtenrade">Lichtenrad</option>
-            </optgroup>
-            <optgroup label="Neukölln">
-              <option value="Neukölln">Neukölln</option>
-              <option value="Britz">Britz</option>
-              <option value="Buckow">Buckow</option>
-              <option value="Rudow">Rudow</option>
-              <option value="Gropiusstadt">Gropiusstadt</option>
-            </optgroup>
-            <optgroup label="Treptow-Köpenick">
-              <option value="Alt-Treptow">Alt-Treptow</option>
-              <option value="Plänterwald">Plänterwald</option>
-              <option value="Baumschulenweg">Baumschulenweg</option>
-              <option value="Johannisthal">Johannisthal</option>
-              <option value="Niederschöneweide">Niederschöneweide</option>
-              <option value="Altglienicke">Altglienicke</option>
-              <option value="Adlershof">Adlershof</option>
-              <option value="Bohnsdorf">Bohnsdorf</option>
-              <option value="Oberschöneweide">Oberschöneweide</option>
-              <option value="Köpenick">Köpenick</option>
-              <option value="Friedrichshagen">Friedrichshagen</option>
-              <option value="Rahnsdorf">Rahnsdorf</option>
-              <option value="Grünau">Grünau</option>
-              <option value="Müggelheim">Müggelheim</option>
-              <option value="Schmöckwitz">Schmöckwitz</option>
-            </optgroup>
-            <optgroup label="Marzahn-Hellersdorf">
-              <option value="Marzahn">Marzahn</option>
-              <option value="Biesdorf">Biesdorf</option>
-              <option value="Kaulsdorf">Kaulsdorf</option>
-              <option value="Mahlsdorf">Mahlsdorf</option>
-              <option value="Hellersdorf">Hellersdorf</option>
-            </optgroup>
-            <optgroup label="Lichtenberg">
-              <option value="Friedrichsfelde">Friedrichsfelde</option>
-              <option value="Karlshorst">Karlshorst</option>
-              <option value="Lichtenberg">Lichtenberg</option>
-              <option value="Falkenberg">Falkenberg</option>
-              <option value="Malchow">Malchow</option>
-              <option value="Wartenberg">Wartenberg</option>
-              <option value="Neu-Hohenschönhausen">Neu-Hohenschönhausen</option>
-              <option value="Alt-Hohenschönhausen">Alt-Hohenschönhausen</option>
-              <option value="Fennpfuhl">Fennpfuhl</option>
-              <option value="Rummelsburg">Rummelsburg</option>
-            </optgroup>
-            <optgroup label="Reinickendorf">
-              <option value="Reinickendorf">Reinickendorf</option>
-              <option value="Tegel">Tegel</option>
-              <option value="Konradshöhe">Konradshöhe</option>
-              <option value="Heiligensee">Heiligensee</option>
-              <option value="Frohnau">Frohnau</option>
-              <option value="Hermsdorf">Hermsdorf</option>
-              <option value="Waidmannslust">Waidmannslust</option>
-              <option value="Lübars">Lübars</option>
-              <option value="Wittenau">Wittenau</option>
-              <option value="Märkisches Viertel">Märkisches Viertel</option>
-              <option value="Borsigwalde">Borsigwalde</option>
-            </optgroup>
-          </select>
-        </div>
         <div class="row">
           <p class="col-md-offset-3 col-md-2"><b>Price</b></p>
         </div>
         <div class="row">
           <span class="col-md-offset-3 col-md-6">
-            <input type="text" id="price" name="price" value=""/>
+            <input type="text" id="price" name="price" value="{{.MinPrice}};{{.MaxPrice}}"/>
           </span>
         </div>
         <div class="row">
@@ -174,7 +63,7 @@
         </div>
         <div class="row">
           <span class="col-md-offset-3 col-md-6">
-            <input type="text" id="rooms" name="rooms" value=""/>
+            <input type="text" id="rooms" name="rooms" value="{{.MinRooms}};{{.MaxRooms}}"/>
           </span>
         </div>
         <div class="row">
@@ -182,22 +71,30 @@
         </div>
         <div class="row">
           <span class="col-md-offset-3 col-md-6">
-            <input type="text" id="size" name="size" value=""/>
+            <input type="text" id="size" name="size" value="{{.MinSize}};{{.MaxSize}}"/>
           </span>
         </div>
+        <div class="row">
+          <p class="col-md-offset-3 col-md-2"><b>Zip Codes</b></p>
+        </div>
+        <div class="row">
+          <span class="col-md-offset-2 col-md-6">
+            <input id='selected-zip-codes' type="text" name='zip' value='{{.Zip}}' readonly size="100">
+          </span>
+        </div>
+        <div class='row'>
+          <div class='col-md-offset-2 col-md-8'>
+            <div id='zip-area-map-canvas'></div>
+          </div>
+        </div>
         <div class="row top-buffer">
-          <button type="submit" class="btn btn-primary col-md-offset-8 col-md-2">Submit</button>
+          <button type="submit" class="btn btn-primary col-md-offset-6 col-md-2">Submit</button>
         </div>
       </form>
+      <div
     </div>
-    <!--link rel="stylesheet" href="http://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css"-->
-    <script src="http://code.jquery.com/jquery-1.10.2.js"></script>
-    <script src="./public/js/ion.rangeSlider.js"></script>
-    <!--script src="http://code.jquery.com/ui/1.10.4/jquery-ui.js"></script-->
-    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-    <script src="./public/js/select2.js"></script>
-    
     <script>
+      $(".alert").alert()
       $(document).ready(function() {
         $("#district").select2();
         $("#price").ionRangeSlider({

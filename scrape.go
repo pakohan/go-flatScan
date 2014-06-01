@@ -16,17 +16,21 @@ import (
 
 func scrape(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
-	go checkOffers(c)
 
-	i := 27
+	i := 0
 	j := 0
 	counter := 1
-	for i == 27 && j < 5 {
+	s, err := GetSettings(c)
+	if err != nil {
+		c.Errorf(err.Error())
+		return
+	}
+	for i == 0 && j < 5 {
 		j++
 		searchUrl := fmt.Sprintf(searchSite, base, counter)
 		counter++
 		var err error
-		_, err = loadList(searchUrl, c)
+		i, err = loadList(searchUrl, c, s)
 		if err != nil {
 			sendErrorMail(c, err)
 			return
@@ -34,8 +38,7 @@ func scrape(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func loadList(url string, c appengine.Context) (i int, err error) {
-	s, err := GetSettings(c)
+func loadList(url string, c appengine.Context, s []Setting) (i int, err error) {
 	i = 0
 	client := urlfetch.Client(c)
 	var doc *goquery.Document
@@ -54,35 +57,39 @@ func loadList(url string, c appengine.Context) (i int, err error) {
 		amount, err := CheckAmountGAE(key, c)
 
 		if amount > 0 || err != nil {
-			continue
-		} else {
 			i++
+			continue
 		}
 
 		offerUrl := fmt.Sprintf("%s%s", base, offerPath)
 		doc, err = LoadDocumentGAE(offerUrl, client)
 		if err != nil {
-			return i, err
+			c.Errorf(err.Error())
+			i++
+			continue
 		}
 
 		offer, err := flatscan.GetOffer(doc, c)
 		if err != nil {
-			return i, err
+			c.Errorf(err.Error())
+			i++
+			continue
 		}
 
 		offer.Url = offerPath
 		offer.ID = md5Sum
 
 		for _, setting := range s {
-			if setting.CheckOffer(*offer) {
+			b, err := setting.CheckOffer(*offer)
+			if b {
 				buf := bytes.NewBufferString("")
 				err = emailTemplate.Execute(buf, offer)
 				if err != nil {
-					return i, err
+					c.Errorf(err.Error())
 				}
 
 				msg := &mail.Message{
-					Sender:  "Flat Scan Sender <admin@flat-scan.appspotmail.com>",
+					Sender:  "Flat Scan Sender <admin@flat-scraper.appspotmail.com>",
 					To:      []string{setting.Email},
 					Subject: "Found a Flat",
 					Body:    buf.String(),
@@ -92,7 +99,10 @@ func loadList(url string, c appengine.Context) (i int, err error) {
 
 				err = mail.Send(c, msg)
 				if err != nil {
-					return i, err
+					c.Errorf(err.Error())
+					//return i, err
+				} else {
+					c.Infof("Mail sent %+v", *msg)
 				}
 			}
 		}
@@ -100,7 +110,7 @@ func loadList(url string, c appengine.Context) (i int, err error) {
 		key, err = datastore.Put(c, key, offer)
 		if err != nil {
 			c.Errorf(err.Error())
-			return i, err
+			//return i, err
 		}
 	}
 

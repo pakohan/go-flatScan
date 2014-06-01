@@ -12,14 +12,14 @@ import (
 )
 
 type Setting struct {
-	Districts string
-	MinPrice  int64
-	MaxPrice  int64
-	MinRooms  float64
-	MaxRooms  float64
-	MinSize   float64
-	MaxSize   float64
-	Email     string
+	Zip      string
+	MinPrice int64
+	MaxPrice int64
+	MinRooms float64
+	MaxRooms float64
+	MinSize  float64
+	MaxSize  float64
+	Email    string
 }
 
 func getRangeValues(formValue string) (beginRange, endRange string, err error) {
@@ -42,7 +42,7 @@ func NewSetting(form url.Values, mail string) (pref *Setting) {
 }
 
 func (s *Setting) ChangeSetting(form url.Values) (numErrors int) {
-	s.Districts = strings.ToLower(strings.Join(form["district"], ";"))
+	s.Zip = strings.ToLower(strings.Join(form["zip"], ";"))
 
 	beginRange, endRange, err := getRangeValues(form.Get("price"))
 	if err == nil {
@@ -92,23 +92,28 @@ func (s *Setting) ChangeSetting(form url.Values) (numErrors int) {
 	return
 }
 
-func (s Setting) CheckOffer(offer flatscan.FlatOffer) (interested bool) {
-	interested = offer.Rooms > 0 && (offer.Rooms >= s.MinRooms) && (offer.Rooms <= s.MaxRooms)
+func (s Setting) CheckOffer(offer flatscan.FlatOffer) (interested bool, err error) {
+
+	interested = s.MaxRooms > 0 && offer.Rooms > 0 && (offer.Rooms >= s.MinRooms) && (offer.Rooms <= s.MaxRooms)
 	if !interested {
 		return
 	}
 
-	interested = offer.RentN > 0 && (int64(offer.RentN) >= s.MinPrice) && (int64(offer.RentN) <= s.MaxPrice)
+	interested = s.MaxPrice > 0 && offer.RentN > 0 && (int64(offer.RentN) >= s.MinPrice) && (int64(offer.RentN) <= s.MaxPrice)
 	if !interested {
 		return
 	}
 
-	interested = offer.Size > 0 && (offer.Size >= s.MinSize) && (offer.Size <= s.MaxSize)
+	interested = s.MaxSize > 0 && offer.Size > 0 && (offer.Size >= s.MinSize) && (offer.Size <= s.MaxSize)
 	if !interested {
 		return
 	}
 
-	interested = len(offer.District) > 0 && strings.Contains(s.Districts, strings.ToLower(offer.District))
+	interested = len(s.Zip) > 0 && offer.Zip > 0 && strings.Contains(s.Zip, fmt.Sprintf("%d", offer.Zip))
+	if !interested {
+		return
+	}
+
 	return
 }
 

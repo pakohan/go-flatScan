@@ -14,12 +14,7 @@ You have a new offer:
 {{end}}{{if gt .Zip 0}}{{.Zip}} {{end}}Berlin
 Rooms: {{.Rooms}}
 Size: {{.Size}}
-Url: http://kleinanzeigen.ebay.de{{.Url}}
-
-Remove ZIP: http://flat-scan.appspot.com/removeZip?ID={{.Zip}}
-Set as invalid: http://flat-scan.appspot.com/toggleOffer?ID={{md5 .Url}}&valid=false
-
-Description: {{.Description}}`
+Url: http://kleinanzeigen.ebay.de{{.Url}}`
 )
 
 var plz map[int]string = map[int]string{

@@ -1,4 +1,7 @@
 cron:
 - description: scrape new offers
   url: /scrape
-  schedule: every 1 minutes
+  schedule: every 2 minutes
+- description: delete old offers
+  url: /delete
+  schedule: every 24 hours

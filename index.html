@@ -32,10 +32,11 @@
       </div>
     </nav>
     <div class="container">
-      <div class="btn-group">
-        <button type="button" class="btn btn-default" onclick="reload(0)">Alle</button>
-        <button type="button" class="btn btn-default" onclick="reload(1)">Interessante</button>
-        <button type="button" class="btn btn-default" onclick="reload(2)">Uninteressante</button>
+      <div class="alert alert-danger fade in">
+        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+        <h2>Please read before usage:</h2>
+        <p>Keep in mind that this server runs as a free service which has quota limits. When these limits are reached, the service will not work anymore.</p>
+        <p>This service is not public, but at least three people use it. <b>Please load this page not more often than necessary!</b></p>
       </div>
       <div id="content-placeholder">
         <img class="centered" src="/public/images/spinner.gif">
@@ -82,7 +83,7 @@
                     <h4 class="modal-title" id="modal-label">{{Street}} {{Zip}} {{District}}</h4>
                   </div>
                   <div class="modal-body">
-                    <img src="https://maps.googleapis.com/maps/api/staticmap?center={{Street}},{{Zip}},{{District}}&zoom=13&size=560x560&sensor=false&key=AIzaSyD-vnJh2YR6_8yjgnyheW0ANcvrwBJ6zVA"><br>
+                    <img src="https://maps.googleapis.com/maps/api/staticmap?center={{Street}},{{Zip}},{{District}}&zoom=13&size=560x560&sensor=false&key=AIzaSyBqfaRyN-jIdyEVU7RtUUF2Q1sCVMk-SOE"><br>
                     {{{replace Description}}}
                   </div>
                   <div class="modal-footer">

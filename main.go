@@ -17,6 +17,7 @@ import (
 )
 
 var emailTemplate *template.Template
+var prefTemplate *template.Template
 
 type Zip struct{}
 
@@ -36,9 +37,16 @@ func init() {
 	}
 	emailTemplate = t
 
+	pt, err := template.New("pref.html").ParseFiles("pref.html")
+	if err != nil {
+		panic(err)
+	}
+	prefTemplate = pt
+
 	http.HandleFunc("/scrape", scrape)
 	http.HandleFunc("/listSaved", listSaved)
 	http.HandleFunc("/", index)
+	http.HandleFunc("/delete", del)
 	http.HandleFunc("/index.html", index)
 	http.HandleFunc("/pref.html", pref)
 }
@@ -81,6 +89,11 @@ func listSaved(w http.ResponseWriter, r *http.Request) {
 	w.Write(val)
 }
 
+func del(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	checkOffers(c)
+}
+
 func checkOffers(c appengine.Context) {
 	dst := make([]flatscan.FlatOffer, 0)
 	now := time.Now().Unix()
@@ -96,14 +109,20 @@ func checkOffers(c appengine.Context) {
 	}
 
 	for i, offer := range dst {
-		resp, _ := client.Get(fmt.Sprintf("%s%s", base, offer.Url))
+		go func() {
+			resp, _ := client.Get(fmt.Sprintf("%s%s", base, offer.Url))
 
-		if resp.StatusCode == 301 {
-			c.Infof("Removing Entity with url '%s'", offer.Url)
-			err = datastore.Delete(c, keys[i])
-			if err != nil {
-				c.Errorf("%s", err.Error())
+			if resp.StatusCode == 301 {
+				c.Infof("Removing Entity with url '%s'", offer.Url)
+				err = datastore.Delete(c, keys[i])
+				if err != nil {
+					c.Errorf("%s", err.Error())
+				}
 			}
-		}
+		}()
 	}
+}
+
+func AEKey(f flatscan.FlatOffer, con appengine.Context) *datastore.Key {
+	return datastore.NewKey(con, "counter", f.Key(), 0, nil)
 }

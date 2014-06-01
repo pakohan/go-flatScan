@@ -4,8 +4,10 @@ import (
 	"appengine"
 	"appengine/datastore"
 	"appengine/user"
+	"bytes"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func index(w http.ResponseWriter, r *http.Request) {
@@ -80,6 +82,13 @@ func pref(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.ServeFile(w, r, "pref.html")
+	buf := bytes.NewBufferString("")
+	err := prefTemplate.Execute(buf, pref)
+	if err != nil {
+		c.Errorf(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
 	return
 }
