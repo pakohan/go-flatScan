@@ -100,6 +100,7 @@ func loadList(url string, c appengine.Context, s []Setting) (i int, err error) {
 				err = mail.Send(c, msg)
 				if err != nil {
 					c.Errorf(err.Error())
+					sendErrorMail(c, err)
 					//return i, err
 				} else {
 					c.Infof("Mail sent %+v", *msg)
