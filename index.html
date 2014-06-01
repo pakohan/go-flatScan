@@ -50,8 +50,6 @@
             <th>R&auml;ume</th>
             <th>Fl&auml;che</th>
             <th>Link</th>
-            <th>Aus Liste entfernen</th>
-            <th>PLZ entfernen</th>
           </thead>
           <tbody>
             {{#offers}}
@@ -64,16 +62,6 @@
               <td>{{Rooms}}</td>
               <td>{{Size}}</td>
               <td><a href="http://kleinanzeigen.ebay.de{{Url}}">Angebot</a></td>
-              <td>
-                {{#if Valid}}
-                  <button class="btn btn-danger btn-sm" onclick="action('toggleOffer', '{{ID}}', false)">Uninteressant</button>
-                {{else}}
-                  <button class="btn btn-success btn-sm" onclick="action('toggleOffer', '{{ID}}', true)">Interessant</button>
-                {{/if}}
-              </td>
-              <td>
-                <button class="btn btn-info btn-sm" onclick="action('removeZip', '{{Zip}}')">PLZ '{{Zip}}' entfernen</button>
-              </td>
             </tr>
             <div class="modal fade" id="myModal-{{@index}}" tabindex="-1" role="dialog" aria-labelledby="modal-label" aria-hidden="true">
               <div class="modal-dialog">
