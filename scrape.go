@@ -111,6 +111,7 @@ func loadList(url string, c appengine.Context, s []Setting) (i int, err error) {
 		key, err = datastore.Put(c, key, offer)
 		if err != nil {
 			c.Errorf(err.Error())
+			sendErrorMail(c, err)
 			//return i, err
 		}
 	}
