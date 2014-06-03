@@ -102,6 +102,8 @@ func checkOffers(c appengine.Context) {
 		return
 	}
 
+	c.Infof("loaded %d entities to check", len(dst))
+
 	client := urlfetch.Client(c)
 
 	for i, offer := range dst {
