@@ -101,6 +101,8 @@ func checkOffers(c appengine.Context) {
 		c.Errorf("%s", err)
 		return
 	}
+  
+  c.Infof("loaded %d entities to check", len(dst))
 
 	client := urlfetch.Client(c)
 
