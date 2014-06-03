@@ -7,7 +7,6 @@ import (
 	"appengine/urlfetch"
 	"crypto/md5"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/pakohan/go-libs/flatscan"
 	"io"
@@ -104,15 +103,13 @@ func checkOffers(c appengine.Context) {
 	}
 
 	client := urlfetch.Client(c)
-	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-		return errors.New("DO NOT FOLLOW REDIRECT")
-	}
 
 	for i, offer := range dst {
 		go func() {
 			resp, _ := client.Get(fmt.Sprintf("%s%s", base, offer.Url))
+			_, ok := resp.Request.Header["Referer"]
 
-			if resp.StatusCode == 301 {
+			if ok {
 				c.Infof("Removing Entity with url '%s'", offer.Url)
 				err = datastore.Delete(c, keys[i])
 				if err != nil {
