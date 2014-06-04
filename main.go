@@ -90,10 +90,10 @@ func listSaved(w http.ResponseWriter, r *http.Request) {
 
 func del(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
-	checkOffers(c)
+	checkOffers(c, w)
 }
 
-func checkOffers(c appengine.Context) {
+func checkOffers(c appengine.Context, w http.ResponseWriter) {
 	dst := make([]flatscan.FlatOffer, 0)
 	now := time.Now().Unix()
 	keys, err := datastore.NewQuery(entitiyFlatOffer).Filter("TimeUpdated <", now-(60*60*24)).GetAll(c, &dst)
@@ -107,7 +107,7 @@ func checkOffers(c appengine.Context) {
 	client := urlfetch.Client(c)
 	sem := make(chan int, 1)
 
-	i := 0
+	k := 0
 
 	for i, offer := range dst {
 		go func() {
@@ -121,14 +121,17 @@ func checkOffers(c appengine.Context) {
 					c.Errorf("%s", err.Error())
 				}
 				sem <- 1
+				w.Write([]byte("entity removed"))
 			} else {
 				sem <- 0
+				w.Write([]byte("entity not removed"))
 			}
 		}()
+		k++
 	}
 
 	sum := 0
-	for j := 0; j < i; j++ {
+	for j := 0; j < k; j++ {
 		sum += <-sem
 	}
 
