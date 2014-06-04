@@ -25,6 +25,9 @@
         margin-top:20px;
         margin-bottom:100px;
       }
+      .top-buffer2 {
+        margin-top:20px;
+      }
     </style>
   </head>
   <body>
@@ -73,6 +76,10 @@
           <span class="col-md-offset-3 col-md-6">
             <input type="text" id="size" name="size" value="{{.MinSize}};{{.MaxSize}}"/>
           </span>
+        </div>
+        <div class="alert alert-danger fade in top-buffer2">
+          <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+          The postal code borders <b>might</b> not be the real ones!
         </div>
         <div class="row">
           <p class="col-md-offset-3 col-md-2"><b>Zip Codes</b></p>

@@ -77,6 +77,8 @@ func loadList(url string, c appengine.Context, s []Setting) (i int, err error) {
 		}
 
 		offer.Url = offerPath
+		c.Infof("Title: '%s', url: %s", offer.Title, offer.Url)
+
 		offer.ID = md5Sum
 
 		for _, setting := range s {

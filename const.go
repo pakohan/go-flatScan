@@ -7,7 +7,7 @@ const (
 	zipEntity        string = "ZIP"
 	userEntitiy      string = "USER"
 	email            string = `
-You have a new offer {{.Title}}:
+You have a new offer: {{.Title}}
 {{if gt .RentN 0.0}}Rent: {{.RentN}}
 {{end}}Adresse: {{if gt (len .Street) 0}}{{.Street}}
 {{end}}{{if gt (len .District) 0}}{{.District}}

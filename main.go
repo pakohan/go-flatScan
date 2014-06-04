@@ -101,12 +101,13 @@ func checkOffers(c appengine.Context) {
 		c.Errorf("%s", err)
 		return
 	}
-  
-  c.Infof("loaded %d entities to check", len(dst))
 
 	c.Infof("loaded %d entities to check", len(dst))
 
 	client := urlfetch.Client(c)
+	sem := make(chan int, 1)
+
+	i := 0
 
 	for i, offer := range dst {
 		go func() {
@@ -119,9 +120,19 @@ func checkOffers(c appengine.Context) {
 				if err != nil {
 					c.Errorf("%s", err.Error())
 				}
+				sem <- 1
+			} else {
+				sem <- 0
 			}
 		}()
 	}
+
+	sum := 0
+	for j := 0; j < i; j++ {
+		sum += <-sem
+	}
+
+	c.Infof("Removed %d/%d entities", sum, len(dst))
 }
 
 func AEKey(f flatscan.FlatOffer, con appengine.Context) *datastore.Key {
