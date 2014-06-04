@@ -110,23 +110,7 @@ func checkOffers(c appengine.Context, w http.ResponseWriter) {
 	k := 0
 
 	for i, offer := range dst {
-		go func() {
-			resp, _ := client.Get(fmt.Sprintf("%s%s", base, offer.Url))
-			_, ok := resp.Request.Header["Referer"]
-
-			if ok {
-				c.Infof("Removing Entity with url '%s'", offer.Url)
-				err = datastore.Delete(c, keys[i])
-				if err != nil {
-					c.Errorf("%s", err.Error())
-				}
-				sem <- 1
-				w.Write([]byte("entity removed"))
-			} else {
-				sem <- 0
-				w.Write([]byte("entity not removed"))
-			}
-		}()
+		go check(keys[i], offer, client, c, sem)
 		k++
 	}
 
@@ -136,6 +120,23 @@ func checkOffers(c appengine.Context, w http.ResponseWriter) {
 	}
 
 	c.Infof("Removed %d/%d entities", sum, len(dst))
+	w.Write([]byte(fmt.Sprintf("Removed %d/%d entities", sum, len(dst))))
+}
+
+func check(key *datastore.Key, offer flatscan.FlatOffer, client *http.Client, c appengine.Context, sem chan int) {
+	resp, _ := client.Get(fmt.Sprintf("%s%s", base, offer.Url))
+	_, ok := resp.Request.Header["Referer"]
+
+	if ok {
+		c.Infof("Removing Entity with url '%s'", offer.Url)
+		err := datastore.Delete(c, key)
+		if err != nil {
+			c.Errorf("%s", err.Error())
+		}
+		sem <- 1
+	} else {
+		sem <- 0
+	}
 }
 
 func AEKey(f flatscan.FlatOffer, con appengine.Context) *datastore.Key {
