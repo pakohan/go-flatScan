@@ -61,7 +61,7 @@ func clear(w http.ResponseWriter, r *http.Request) {
 	for _, v := range settings {
 		key := datastore.NewKey(c, userEntitiy, v.Email, 0, nil)
 		v.Active = true
-		_, err = datastore.Put(c, key, v)
+		_, err = datastore.Put(c, key, &v)
 		if err != nil {
 			panic(err)
 		}
