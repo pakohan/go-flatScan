@@ -48,25 +48,6 @@ func init() {
 	http.HandleFunc("/delete", del)
 	http.HandleFunc("/index.html", handle(main))
 	http.HandleFunc("/pref.html", handle(pref))
-	http.HandleFunc("/clear", clear)
-}
-
-func clear(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
-	settings := make([]Setting, 0)
-	_, err := datastore.NewQuery(userEntitiy).GetAll(c, &settings)
-	if err != nil {
-		panic(err)
-	}
-	for _, v := range settings {
-		key := datastore.NewKey(c, userEntitiy, v.Email, 0, nil)
-		v.Active = true
-		_, err = datastore.Put(c, key, &v)
-		if err != nil {
-			panic(err)
-		}
-	}
-
 }
 
 func sendErrorMail(c appengine.Context, err error) {
