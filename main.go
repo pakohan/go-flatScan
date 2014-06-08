@@ -44,10 +44,10 @@ func init() {
 
 	http.HandleFunc("/scrape", scrape)
 	http.HandleFunc("/listSaved", listSaved)
-	http.HandleFunc("/", index)
+	http.HandleFunc("/", handle(main))
 	http.HandleFunc("/delete", del)
-	http.HandleFunc("/index.html", index)
-	http.HandleFunc("/pref.html", pref)
+	http.HandleFunc("/index.html", handle(main))
+	http.HandleFunc("/pref.html", handle(pref))
 }
 
 func sendErrorMail(c appengine.Context, err error) {

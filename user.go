@@ -20,6 +20,7 @@ type Setting struct {
 	MinSize  float64
 	MaxSize  float64
 	Email    string
+	Active   bool
 }
 
 func getRangeValues(formValue string) (beginRange, endRange string, err error) {
@@ -43,6 +44,8 @@ func NewSetting(form url.Values, mail string) (pref *Setting) {
 
 func (s *Setting) ChangeSetting(form url.Values) (numErrors int) {
 	s.Zip = strings.ToLower(strings.Join(form["zip"], ";"))
+
+	s.Active = strings.EqualFold(form.Get("active"), "on")
 
 	beginRange, endRange, err := getRangeValues(form.Get("price"))
 	if err == nil {
@@ -118,6 +121,6 @@ func (s Setting) CheckOffer(offer flatscan.FlatOffer) (interested bool, err erro
 }
 
 func GetSettings(c appengine.Context) (settings []Setting, err error) {
-	_, err = datastore.NewQuery(userEntitiy).GetAll(c, &settings)
+	_, err = datastore.NewQuery(userEntitiy).Filter("Active =", true).GetAll(c, &settings)
 	return
 }
