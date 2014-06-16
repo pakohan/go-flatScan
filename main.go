@@ -124,7 +124,13 @@ func checkOffers(c appengine.Context, w http.ResponseWriter) {
 }
 
 func check(key *datastore.Key, offer flatscan.FlatOffer, client *http.Client, c appengine.Context, sem chan int) {
-	resp, _ := client.Get(fmt.Sprintf("%s%s", base, offer.Url))
+	resp, err := client.Get(fmt.Sprintf("%s%s", base, offer.Url))
+	if err != nil {
+		c.Errorf(err.Error)
+		sem <- 0
+		return
+	}
+
 	_, ok := resp.Request.Header["Referer"]
 
 	if ok {
