@@ -41,60 +41,14 @@
       <div id="content-placeholder">
         <img class="centered" src="/public/images/spinner.gif">
       </div>
-      <script id="some-template" type="text/x-handlebars-template">
-        <table cellpadding="0" cellspacing="0" border="0" class="datatable table table-striped">
-          <thead>
-            <th>Hinzugef&uuml;gt</th>
-            <th>Miete</th>
-            <th>Überschrift</th>
-            <th>Adresse</th>
-            <th>R&auml;ume</th>
-            <th>Fl&auml;che</th>
-            <th>Link</th>
-          </thead>
-          <tbody>
-            {{#offers}}
-            <tr>
-              <td>{{unixtime TimeUpdated}}</td>
-              <td>{{RentN}} &euro;</td>
-              <td>
-                <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#myModal-{{@index}}">{{Title}}</button>
-              </td>
-              <td>{{Street}} {{Zip}} {{District}}</td>
-              <td>{{Rooms}}</td>
-              <td>{{Size}}</td>
-              <td><a href="http://kleinanzeigen.ebay.de{{Url}}">Angebot</a></td>
-            </tr>
-            <div class="modal fade" id="myModal-{{@index}}" tabindex="-1" role="dialog" aria-labelledby="modal-label" aria-hidden="true">
-              <div class="modal-dialog">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                    <h4 class="modal-title" id="modal-label">{{Title}}</h4>
-                  </div>
-                  <div class="modal-body">{{Street}} {{Zip}} {{District}}<br>
-                    <img src="//maps.googleapis.com/maps/api/staticmap?center={{Street}},{{Zip}},{{District}}&zoom=13&size=560x560&sensor=false&key=AIzaSyBqfaRyN-jIdyEVU7RtUUF2Q1sCVMk-SOE"><br>
-                    {{{replace Description}}}
-                  </div>
-                  <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {{/offers}}
-          </tbody>
-        </table>
-      </script>
     </div>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
     <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/datatables/1.9.4/jquery.dataTables.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.4/handlebars.runtime.min.js"></script>
     <script src="/public/js/datatables.js"></script>
+    <script src="/public/js/table.template.js"></script>
     <script>
-      var source = $("#some-template").html();
-      var template = Handlebars.compile(source);
       Handlebars.registerHelper('unixtime', function (unixtime) {
           var date = new Date(unixtime * 1000);
           return date.toISOString();
@@ -104,7 +58,6 @@
       });
 
       var state = 0;
-
       function reload(scope) {
         state = scope;
         $.ajax({
@@ -113,12 +66,15 @@
                 "scope": scope
             }
        }).done(function (data) {
-            console.log(data);
+            // console.log(data);
             var template_data = {
                 offers: data,
                 offset: 0
             };
-            $("#content-placeholder").html(template(template_data));
+            template = Handlebars.templates['table.template']; // your template minus the .js
+            html    = template(template_data);
+
+            $("#content-placeholder").html(html);
             $('.datatable').dataTable({
                 "sPaginationType": "bs_full"
             });

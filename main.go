@@ -1,18 +1,25 @@
 package main
 
 import (
-	"appengine"
-	"appengine/datastore"
-	"appengine/mail"
-	"appengine/urlfetch"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"github.com/pakohan/go-libs/flatscan"
 	"io"
 	"net/http"
+	"strings"
 	"text/template"
 	"time"
+
+	"github.com/pakohan/go-libs/flatscan"
+
+	"net/url"
+
+	"appengine"
+	"appengine/datastore"
+	"appengine/mail"
+	_ "appengine/remote_api"
+	"appengine/taskqueue"
+	"appengine/urlfetch"
 )
 
 var emailTemplate *template.Template
@@ -46,6 +53,7 @@ func init() {
 	http.HandleFunc("/listSaved", listSaved)
 	http.HandleFunc("/", handle(main))
 	http.HandleFunc("/delete", del)
+	http.HandleFunc("/worker", checkOffers)
 	http.HandleFunc("/index.html", handle(main))
 	http.HandleFunc("/pref.html", handle(pref))
 }
@@ -90,10 +98,14 @@ func listSaved(w http.ResponseWriter, r *http.Request) {
 
 func del(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
-	checkOffers(c, w)
+	t := taskqueue.NewPOSTTask("/worker", nil)
+	if _, err := taskqueue.Add(c, t, ""); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
-func checkOffers(c appengine.Context, w http.ResponseWriter) {
+func checkOffers(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
 	dst := make([]flatscan.FlatOffer, 0)
 	now := time.Now().Unix()
 	keys, err := datastore.NewQuery(entitiyFlatOffer).Filter("TimeUpdated <", now-(60*60*24)).GetAll(c, &dst)
@@ -105,43 +117,38 @@ func checkOffers(c appengine.Context, w http.ResponseWriter) {
 	c.Infof("loaded %d entities to check", len(dst))
 
 	client := urlfetch.Client(c)
-	sem := make(chan int, 1)
-
-	k := 0
 
 	for i, offer := range dst {
-		go check(keys[i], offer, client, c, sem)
-		k++
+		check(keys[i], offer, client, c)
 	}
-
-	sum := 0
-	for j := 0; j < k; j++ {
-		sum += <-sem
-	}
-
-	c.Infof("Removed %d/%d entities", sum, len(dst))
-	w.Write([]byte(fmt.Sprintf("Removed %d/%d entities", sum, len(dst))))
 }
 
-func check(key *datastore.Key, offer flatscan.FlatOffer, client *http.Client, c appengine.Context, sem chan int) {
-	resp, err := client.Get(fmt.Sprintf("%s%s", base, offer.Url))
+func check(key *datastore.Key, offer flatscan.FlatOffer, client *http.Client, c appengine.Context) {
+	urlObj, err := url.Parse(fmt.Sprintf("%s%s", base, offer.Url))
 	if err != nil {
-		c.Errorf(err.Error)
-		sem <- 0
+		c.Errorf(err.Error())
+		return
+	}
+
+	urlParts := strings.Split(urlObj.Path, "/")
+	urlParts = strings.Split(urlParts[len(urlParts)-1], "-")
+
+	link := fmt.Sprintf("%s/anzeigen/s-anzeige/%s", base, urlParts[0])
+
+	resp, err := client.Get(link)
+	if err != nil {
+		c.Errorf(err.Error())
 		return
 	}
 
 	_, ok := resp.Request.Header["Referer"]
 
 	if ok {
-		c.Infof("Removing Entity with url '%s'", offer.Url)
+		c.Infof("Removing Entity with url '%s'", link)
 		err := datastore.Delete(c, key)
 		if err != nil {
 			c.Errorf("%s", err.Error())
 		}
-		sem <- 1
-	} else {
-		sem <- 0
 	}
 }
 
