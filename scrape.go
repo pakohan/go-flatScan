@@ -1,17 +1,19 @@
 package main
 
 import (
+	"bytes"
+	"crypto/md5"
+	"fmt"
+	"io"
+	"net/http"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/pakohan/go-libs/flatscan"
+
 	"appengine"
 	"appengine/datastore"
 	"appengine/mail"
 	"appengine/urlfetch"
-	"bytes"
-	"crypto/md5"
-	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"github.com/pakohan/go-libs/flatscan"
-	"io"
-	"net/http"
 )
 
 func scrape(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +73,7 @@ func loadList(url string, c appengine.Context, s []Setting) (i int, err error) {
 
 		offer, err := flatscan.GetOffer(doc, c)
 		if err != nil {
-			c.Errorf(err.Error())
+			c.Errorf("%s: %s", err.Error(), offerPath)
 			i++
 			continue
 		}
